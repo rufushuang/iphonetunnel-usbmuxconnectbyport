@@ -22,6 +22,7 @@
 #define ADNCI_MSG_UNKNOWN       3
 
 typedef void* restore_dev_t;
+typedef void* AMRecoveryModeDevice;
 typedef void* afc_conn_t;
 typedef void* am_device_t;
 typedef int muxconn_t;
@@ -32,15 +33,9 @@ struct am_device_notification_callback_info
         unsigned int msg;       /* 4    one of ADNCI_MSG_* */
 };
 
-typedef void(*am_device_notification_callback_t)(struct am_device_notification_callback_info *);
+typedef void (*am_device_notification_callback_t)(struct am_device_notification_callback_info *);
 
-//typedef struct {
-//    unsigned int unknown0;                      /* 0 */
-//    unsigned int unknown1;                      /* 4 */
-//    unsigned int unknown2;                      /* 8 */
-//    am_device_notification_callback_t callback;   /* 12 */ 
-//    unsigned int unknown3;                      /* 16 */
-//} am_device_callbacks_t;
+typedef void (*am_restore_device_notification_callback)(AMRecoveryModeDevice device);
 
 typedef void* am_device_callbacks_t;
 
@@ -117,6 +112,17 @@ int AMDeviceStartService(am_device_t am_device, CFStringRef service_name, int *h
 int AFCConnectionOpen(int handle, unsigned int io_timeout, afc_conn_t* afc_connection);
 int AMDeviceDisconnect(am_device_t am_device);
 int AMDeviceStopSession(am_device_t am_device);
+
+int AMRestoreRegisterForDeviceNotifications(
+    am_restore_device_notification_callback dfu_connect_callback,
+    am_restore_device_notification_callback recovery_connect_callback,
+    am_restore_device_notification_callback dfu_disconnect_callback,
+    am_restore_device_notification_callback recovery_disconnect_callback,
+    unsigned int unknown0,
+    void *ctx);
+
+int AMRecoveryModeDeviceReboot(AMRecoveryModeDevice device);
+int AMRecoveryModeDeviceSetAutoBoot(AMRecoveryModeDevice device, bool autoboot);
 
 CFStringRef AMDeviceCopyDeviceIdentifier(am_device_t device);
 
@@ -209,6 +215,35 @@ void print_error(int error = 0) {
 	printf("Error 0x%X (%i): '%s'\n", err, err, strerror(err));
 }
 
+void dfu_connect_callback(AMRecoveryModeDevice device) 
+{
+	printf("dfu_connect_callback\n");
+}
+
+void dfu_disconnect_callback(AMRecoveryModeDevice device) 
+{
+	printf("dfu_disconnect_callback\n");	
+}
+
+void recovery_connect_callback(AMRecoveryModeDevice device) 
+{
+	printf("recovery_connect_callback\n");
+	AMRecoveryModeDeviceSetAutoBoot(device, true);
+	AMRecoveryModeDeviceReboot(device);
+}
+
+void recovery_disconnect_callback(AMRecoveryModeDevice device) 
+{
+	printf("recovery_disconnect_callback\n");
+}
+
+void kick_out_of_recovery()
+{
+	printf("Will try to kick connected devices out of the Recovery mode..\n");
+	AMRestoreRegisterForDeviceNotifications(dfu_connect_callback, recovery_connect_callback, dfu_disconnect_callback, recovery_disconnect_callback, 0, NULL);
+	Sleep(-1);
+}
+
 int main (int argc, char *argv [])
 {
 	// パラメータ確認
@@ -218,8 +253,10 @@ int main (int argc, char *argv [])
 		printf(
 			"\niphone_tunnel v2.0 for Mac\n"
 			"Created by novi. (novi.mad@gmail.com)\n"
-			"Restore mode hack by msft.guy\n"
-			"\nUsage: iphone_tunnel [<iPhone port> <Local port> [Device ID, 40 digit]]\n"
+			"Restore mode hack by msft.guy ((rev 5))\n"
+			"\n"
+			"Usage: iphone_tunnel [<iPhone port> <Local port> [Device ID, 40 digit]]\n"
+			"OR: iphone_tunnel -r to kick out of the recovery mode\n"
 			"Example: iphone_tunnel 22 9876 0123456...abcdef\n"
 			"Default ports are 22 %hu\n", default_local_port
 				   );
@@ -292,6 +329,10 @@ int main (int argc, char *argv [])
 
 #endif
 
+
+	if (argc > 1 && 0 == stricmp(argv[1], "-r")) {
+		kick_out_of_recovery();
+	}
 
 	if (argc >= 3) 
 	{
