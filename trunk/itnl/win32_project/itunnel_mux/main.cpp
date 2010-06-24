@@ -168,18 +168,14 @@ void wait_connections();
 void notification(struct am_device_notification_callback_info*);
 void*THREADPROCATTR conn_forwarding_thread(void* arg);
 
-// 接続数
 static int threadCount = 0;
 
-// Mac側のソケット
 static int  sock;
 
 static muxconn_t muxConn = 0;
 
-// デバイスID指定
 static const char* target_device_id = nil;
 
-// ターゲットデバイス
 static am_device_t target_device = NULL;
 
 #if !WIN32
@@ -187,7 +183,6 @@ void recv_signal(int sig)
 {
 	printf("Info: Signal received. (%d)\n", sig);
 
-	// 標準関数へシグナルを投げる
 	fflush(stdout);
 	signal(sig, SIG_DFL);
 	raise(sig);
@@ -246,12 +241,10 @@ void kick_out_of_recovery()
 
 int main (int argc, char *argv [])
 {
-	// パラメータ確認
-	// ヘルプ表示
-	if ( !(argc >= 3 && argc <= 4))
+	if (argc < 2)
 	{
 		printf(
-			"\niphone_tunnel v2.0 for Mac\n"
+			"\niphone_tunnel v2.0 for Win/Mac\n"
 			"Created by novi. (novi.mad@gmail.com)\n"
 			"Restore mode hack by msft.guy ((rev 5))\n"
 			"\n"
@@ -259,7 +252,7 @@ int main (int argc, char *argv [])
 			"OR: iphone_tunnel -r to kick out of the recovery mode\n"
 			"Example: iphone_tunnel 22 9876 0123456...abcdef\n"
 			"Default ports are 22 %hu\n", default_local_port
-				   );
+			);
 	}
               
 #if WIN32
@@ -336,17 +329,12 @@ int main (int argc, char *argv [])
 
 	if (argc >= 3) 
 	{
-		// デバイス側ポートを取得
-		// バイトオーダーを変換
 		sscanf(argv[1], "%hu", &g_iphone_port);
-
-		// Mac側ポートを取得
 		sscanf(argv[2], "%hu", &g_local_port);
 	}
         
         
 #if !WIN32
-	// シグナル受信の動作を登録
 	signal(SIGABRT, recv_signal);
 	signal(SIGILL, recv_signal);
 	signal(SIGINT, recv_signal);
@@ -360,7 +348,6 @@ int main (int argc, char *argv [])
 		target_device_id = NULL;
 	}
 
-	// Mac側のクライアントからの待ち受け開始
 	wait_connections ();
 
 	return 0;
@@ -371,26 +358,20 @@ void wait_connections()
 	struct sockaddr_in saddr;
 	int ret = 0;
 
-	// Socket を作成
-	// Mac側
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
 	saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	saddr.sin_port = htons(g_local_port);     
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	// トンネルを強制終了して再起動したときのバインド失敗を回避
-	// http://homepage3.nifty.com/owl_h0h0/unix/job/UNIX/network/socket.html
 	int temp = 1;
 	if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&temp, sizeof(temp))) {
 		print_error();
 		printf("setsockopt() failed - ignorable\n");
 	}
 
-	// バインド
 	ret = bind(sock, (struct sockaddr*)&saddr, sizeof(struct sockaddr));
 
-	// バインドエラーチェック
 	if ( ret == SOCKET_ERROR ) {
 		fflush(stdout);
 		printf("bind error %i !\n", ret);
@@ -398,10 +379,8 @@ void wait_connections()
 		exit(EXIT_BIND_ERROR);
 	}
 
-	// リクエスト受信受付
 	listen(sock, 0);
 			
-	// 接続待ち用のスレッドを作成
 	int lpThreadId;
 	pthread_t socket_thread;
 	lpThreadId = pthread_create(&socket_thread, NULL, wait_for_device, NULL);
@@ -411,7 +390,6 @@ void wait_connections()
 	fflush(stdout);
 
 	while (1) {
-		// デバイスのコールバックを登録
 		am_device_callbacks_t callbacks; 
 		ret = AMDeviceNotificationSubscribe(notification, 0, 0, 0, &callbacks);
 		if (ret != ERR_SUCCESS) {
@@ -462,7 +440,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 			
 	while (1) {
 		
-		//printf("waiting for device...\n");
 		if (target_device == NULL) {
 			sleep(1);
 			continue;
@@ -470,7 +447,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 		
 		printf("Info: Waiting for new TCP connection on port %hu\n", g_local_port);
 						
-		// Mac側クライアントからの待ち
 		struct sockaddr_in sockAddrin;
 		socklen_t len = sizeof(sockAddrin);
 		int new_sock = accept(sock, (struct sockaddr*) &sockAddrin , &len);
@@ -483,9 +459,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 		
 		printf("Info: New connection...\n");
 		
-		// ターゲットが準備完了
-		// デバイスへ接続
-
 		if (muxConn == 0)
 		{
 			ret = AMDeviceConnect(target_device);
@@ -516,7 +489,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 		struct connection* connection1;
 		struct connection* connection2;
 		
-		// 接続ソケット構造体を作る
 		connection1 = new connection;
 		if (!connection1) {
 			exit(EXIT_GENERAL_ERROR);
@@ -526,7 +498,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 			exit(EXIT_GENERAL_ERROR);
 		}
 		
-		// 送受信用のスレッドへ値を渡す
 		connection1->from_handle = new_sock;
 		connection1->to_handle = handle;
 		connection2->from_handle = handle;
@@ -535,7 +506,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 		printf("sock handle newsock:%d iphone:%d\n", new_sock, handle);
 		fflush(stdout);
 		
-		// 送受信用のスレッドを作成
 		int lpThreadId;
 		int lpThreadId2;
 		pthread_t thread1;
@@ -551,7 +521,6 @@ void* THREADPROCATTR wait_for_device(void* arg)
 		
 		continue;
 
-		// 接続失敗時の後始末
 error_connect:
 		printf("Error: Device Connect\n");
 		AMDeviceStopSession(target_device);
@@ -573,41 +542,33 @@ error_service:
 
 /****************************************************************************/
 
-// Mac からのデータを iPhone へ転送
 void* THREADPROCATTR conn_forwarding_thread(void* arg)
 {
 	connection* con = (connection*)arg;
 	uint8_t buffer[BUFFER_SIZE];
 	int bytes_recv, bytes_send;
 	
-	// スレッドカウントを増やす
 	threadCount++;
 	fflush(stdout);
 	printf("threadcount=%d\n",threadCount);
 	fflush(stdout);
 	
 	while (1) {
-		// Mac からのデータを受信
 		bytes_recv = recv(con->from_handle, (char*)buffer, BUFFER_SIZE, 0);
 		
-		// それを iPhone へ送る
 		bytes_send = send(con->to_handle, (char*)buffer, bytes_recv, 0);
 		
-		// エラー発生
 		if (bytes_recv == 0 || bytes_recv == SOCKET_ERROR || bytes_send == 0 || bytes_send == SOCKET_ERROR) {
-			// スレッドカウントを減らす
 			threadCount--;
 			fflush(stdout);
 			printf("threadcount=%d\n", threadCount);
 			fflush(stdout);
 			
-			// コネクションを閉じる
 			close(con->from_handle);
 			close(con->to_handle);
 									
 			delete con;
 			
-			// スレッドを終了
 			break;
 		}
 	}
