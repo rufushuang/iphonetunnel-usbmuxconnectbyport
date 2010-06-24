@@ -323,7 +323,7 @@ int main (int argc, char *argv [])
 #endif
 
 
-	if (argc > 1 && 0 == stricmp(argv[1], "-r")) {
+	if (argc > 1 && 0 == strcasecmp(argv[1], "-r")) {
 		kick_out_of_recovery();
 	}
 
