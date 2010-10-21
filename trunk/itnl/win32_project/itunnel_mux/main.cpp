@@ -97,6 +97,8 @@ int parse_args(int argc, char *argv [])
 			pOpt = &g_ramdisk; newMode = MODE_ICMD;
 		} else if (!strcmp(arg, "--ramdisk-command")) {
 			pOpt = &g_ramdiskCmd; newMode = MODE_ICMD;
+		} else if (!strcmp(arg, "--go-command")) {
+			pOpt = &g_goCmd; newMode = MODE_ICMD;
 		} else if (!strcmp(arg, "--ramdisk-delay")) {
 			pIntOpt = &g_ramdiskDelay; newMode = MODE_ICMD;
 		} else if (!strcmp(arg, "--devicetree")) {
