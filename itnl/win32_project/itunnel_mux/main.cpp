@@ -52,16 +52,6 @@ void wait_connections();
 void notification(struct am_device_notification_callback_info*);
 void*THREADPROCATTR conn_forwarding_thread(void* arg);
 
-static int threadCount = 0;
-
-static int  sock;
-
-static muxconn_t muxConn = 0;
-
-static const char* target_device_id = nil;
-
-static am_device_t target_device = NULL;
-
 #pragma mark Main function
 
 #if WIN32 
@@ -72,8 +62,6 @@ static am_device_t target_device = NULL;
 
 int g_iphone_port = 22;
 int g_local_port = default_local_port;
-
-static ICMD_STATE g_icmdState = ICMD_ZERO;
 
 int parse_args(int argc, char *argv [])
 {
