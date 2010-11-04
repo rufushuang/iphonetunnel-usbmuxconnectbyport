@@ -136,13 +136,22 @@ printf(
 			"Created by novi. (novi.mad@gmail.com)\n"
 			"Restore mode hack by msft.guy ((rev 5))\n"
 			"\n"
-			"Usage: iphone_tunnel --tunnel [--iport <iPhone port>] [--lport <Local port>] [Device ID, 40 digit]]\n"
-			"OR: iphone_tunnel --autoboot to kick out of the recovery mode\n"
+			"Usage: iphone_tunnel --tunnel [--iport <iPhone port>] [--lport <Local port>]\n"
+			"OR: iphone_tunnel --autoboot\tto kick out of the recovery mode\n"
 			"OR: iphone_tunnel [--ibss <iBSS file>] [--exploit <iBSS USB exploit payload>]\n"
 			"\t[--ibec <iBEC file>] [--ramdisk <ramdisk file>]\n"
 			"\t[--devicetree <devicetree file>] [--kernelcache <kernelcache file>]\n"
-			"Example: iphone_tunnel 22 9876 0123456...abcdef\n"
-			"Default ports are 22 %hu\n", default_local_port
+			"\t[--ramdisk-command <command to execute after sending ramdisk, default is 'ramdisk'>]\n"
+			"\t[--ramdisk-delay <delay before loading ramdisk, in seconds, default is 5>]\n"
+			"\t[--go-command <command to execute after sending iBEC, default is 'go'>]\n"
+			"\t[--verbose <verbose level>]\n"
+			"\n"
+			
+			"Examples:\n"
+			"\tiphone_tunnel --lport 2022\n"
+			"\tiphone_tunnel --ibec iBEC_file_from_custom_FW --ramdisk created_ramdisk.dmg.ssh --devicetree DevicetreeXXX.img3 --kernelcache kernelcache_file_from_custom_FW --ramdisk-command \"ramdisk 0x90000000\"\n"
+			"\n"
+			"Default ports are 22(iPhone) <-> %hu(this machine)\n", default_local_port
 			);
 }
 
